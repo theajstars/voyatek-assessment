@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
 import { config } from "./config";
 import { HttpSuccessCodesObj } from "./data";
-import { createTable, ReturnResponse } from "./methods";
+import { createTable, ReturnResponse, wipeDatabase } from "./methods";
 import { prisma } from "./prisma";
 import authRoutes from "./routes/auth";
 import roomRoutes from "./routes/rooms";
@@ -178,4 +178,5 @@ io.on("connection", async (socket) => {
 server.listen(config.port, () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on ${config.port}`);
+  // wipeDatabase();
 });
