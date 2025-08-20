@@ -55,6 +55,7 @@ router.get("/me", validateAuthHeader, async (req: Request, res: Response) => {
   }
 });
 
+// REGISTER A NEW USER
 router.post(
   "/register",
   validateRegister,
@@ -112,6 +113,7 @@ router.post(
   }
 );
 
+// LOGIN A USER
 router.post("/login", validateLogin, async (req: Request, res: Response) => {
   const { hasNoErrors, errors } = getValidationErrors(req);
   if (hasNoErrors) {
