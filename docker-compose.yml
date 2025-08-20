@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: voyatek_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-voyatek}
+      MYSQL_USER: ${MYSQL_USER:-voyatek}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-voyatekpass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: voyatek_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173}
+      DATABASE_URL: mysql://${MYSQL_USER:-voyatek}:${MYSQL_PASSWORD:-voyatekpass}@db:3306/${MYSQL_DATABASE:-voyatek}
+    ports:
+      - "8080:8080"
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+
+volumes:
+  mysql_data:
+    driver: local
