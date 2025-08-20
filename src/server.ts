@@ -72,11 +72,128 @@ io.on("connection", async (socket) => {
 
   socket.on("join_room", async ({ roomId }: { roomId: string }) => {
     if (!roomId) return;
+
+    // Check if user is a member of the room
     const isMember = await prisma.roomMember.findFirst({
       where: { roomId, userId },
     });
     if (!isMember) return;
+
+    // Get user details for the join notification
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    });
+
+    // Get current room participants count
+    const participantCount = await prisma.roomMember.count({
+      where: { roomId },
+    });
+
+    // Join the room
     socket.join(roomId);
+
+    // Notify all users in the room that someone joined
+    socket.to(roomId).emit("user_joined_room", {
+      roomId,
+      user,
+      participantCount,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Send confirmation to the joining user with current room info
+    socket.emit("room_joined", {
+      roomId,
+      participantCount,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Update room's updatedAt timestamp
+    await prisma.room
+      .update({
+        where: { id: roomId },
+        data: { updatedAt: new Date() },
+      })
+      .catch(() => undefined); // Ignore errors if room doesn't exist
+  });
+
+  socket.on("leave_room", async ({ roomId }: { roomId: string }) => {
+    if (!roomId) return;
+
+    // Check if user is a member of the room
+    const isMember = await prisma.roomMember.findFirst({
+      where: { roomId, userId },
+    });
+    if (!isMember) return;
+
+    // Get user details for the leave notification
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true },
+    });
+
+    // Leave the room
+    socket.leave(roomId);
+
+    // Get updated participant count
+    const participantCount = await prisma.roomMember.count({
+      where: { roomId },
+    });
+
+    // Notify all users in the room that someone left
+    socket.to(roomId).emit("user_left_room", {
+      roomId,
+      user,
+      participantCount,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Send confirmation to the leaving user
+    socket.emit("room_left", {
+      roomId,
+      participantCount,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Update room's updatedAt timestamp
+    await prisma.room
+      .update({
+        where: { id: roomId },
+        data: { updatedAt: new Date() },
+      })
+      .catch(() => undefined);
+  });
+
+  socket.on("get_room_participants", async ({ roomId }: { roomId: string }) => {
+    if (!roomId) return;
+
+    // Check if user is a member of the room
+    const isMember = await prisma.roomMember.findFirst({
+      where: { roomId, userId },
+    });
+    if (!isMember) return;
+
+    // Get current participants
+    const participants = await prisma.roomMember.findMany({
+      where: { roomId },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+      orderBy: { joinedAt: "asc" },
+    });
+
+    // Send participants list to the requesting user
+    socket.emit("room_participants", {
+      roomId,
+      participants: participants.map((p) => ({
+        ...p.user,
+        joinedAt: p.joinedAt,
+      })),
+      participantCount: participants.length,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   socket.on(
