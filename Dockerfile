@@ -13,7 +13,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm install --production
 
 COPY tsconfig.json ./
 COPY prisma ./prisma
