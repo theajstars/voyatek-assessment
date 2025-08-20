@@ -1,4 +1,4 @@
-FROM node:22.15.0-bullseye AS base
+FROM node:20-bullseye AS base
 WORKDIR /app
 
 # Install OpenSSL and other required dependencies with fallback
@@ -22,7 +22,7 @@ RUN npx prisma generate
 COPY src ./src
 RUN npm run build
 
-FROM node:22.15.0-bullseye AS runtime
+FROM node:20-bullseye AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
